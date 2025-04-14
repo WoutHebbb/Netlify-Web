@@ -1,0 +1,33 @@
+function UploadFileToAttachment(url) {
+    var translatedSa = new GlideRecord('sys_attachment');
+    var singleOutMsg = new sn_cs.SinglePartOutMsg();
+
+    translatedSa.addQuery('sys_created_by', gs.getUserName());
+    translatedSa.orderByDesc('sys_created_on');
+    translatedSa.query();
+    if (translatedSa.next()) {
+        // Get info from the Attachment
+        var translatedFileName = translatedSa.getValue('file_name');
+        var translatedFileSysID = translatedSa.getValue('sys_id');
+        gs.log('here ' + translatedFileName);
+    }
+
+    var tablename = 'sys_attachment';
+    var recordSysId = translatedFileSysID;
+    var filename = 'tranlated-' + translatedFileName;
+    // Download the file
+    var fileUrl = url;
+    var request = new sn_ws.RESTMessageV2();
+    request.setHttpMethod('get');
+    request.setEndpoint(fileUrl);
+    // Configure the request to save the response as an attachment
+    request.saveResponseBodyAsAttachment(tablename, recordSysId, filename);
+    // When we execute the request, the attachment will automatically be
+    // saved to the record we specified
+    var response = request.execute();
+    var httpResponseStatus = response.getStatusCode();
+    var httpResponseContentType = response.getHeader('Content-Type');
+    gs.debug("http response status_code: " + httpResponseStatus);
+    gs.debug("http response content-type: " + httpResponseContentType);
+}
+type: 'UploadFileToAttachment';

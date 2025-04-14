@@ -1,0 +1,79 @@
+// Select the most recent file from the Attachment table and converts the content to BASE64
+// It will send an POST request to the DeeplAPI containing the original language of the document, to wich language it needs to be translated and the BASE64
+// It will return a link to download the translated file
+
+// Currently only working with .txt files
+function GetContentOfFile(resultLang) {
+    var b64attachment = "";
+    var allAttachments = "";
+    var attachmentData = "";
+
+    // Select the most recent file from the current user
+	var currentUserID = gs.getUserID();
+    gs.info('Current user sys_id: ' + currentUserID);
+	
+    var sa = new GlideRecord('sys_attachment');
+	sa.addQuery('sys_created_by', gs.getUserName());
+    sa.orderByDesc('sys_created_on');
+    sa.query();
+
+    if (sa.next()) {
+        // Get info from the Attachment
+        var fileName = sa.getValue('file_name');
+        var fileSysID = sa.getValue('sys_id');
+        var fileExtension = fileName.split('.').pop();
+
+        gs.log('Document Name: ' + fileName);
+        gs.log('File extension: ' + fileExtension);
+        gs.log('Document Sys_id: ' + fileSysID);
+
+        // Convert content to BASE64
+        var attachmentIS = new GlideSysAttachmentInputStream(sa.sys_id);
+        var byteArrayOS = new Packages.java.io.ByteArrayOutputStream();
+        attachmentIS.writeTo(byteArrayOS);
+        b64attachment = GlideBase64.encode(byteArrayOS.toByteArray());
+        attachmentData = b64attachment;
+
+        gs.log('Get the BASE64 of the uploaded file');
+        gs.log(attachmentData);
+    } else {
+        gs.log('Error: No file found');
+    }
+
+    // The body is created in 'REST Messages Deepl File Translation -> Post File'
+
+    // Send POST to DeeplAPI and returns download link
+    // Use the REST Message and fill in the var
+    try {
+        var r = new sn_ws.RESTMessageV2('Deepl File Translation', 'Post File');
+        r.setStringParameterNoEscape('base64', attachmentData);
+        r.setStringParameterNoEscape('slang', '');
+        r.setStringParameterNoEscape('filetype', fileExtension);
+        r.setStringParameterNoEscape('tlang', resultLang);
+        r.setStringParameterNoEscape('filename', 'document.' + fileExtension);
+
+
+        var url = 'https://festo-deepl-translationapi.azurewebsites.net/api/FileGet';
+        var apiKey = 'Yade6KotmcuPw9ZOxSIY073aejA31KiyOlqHCuyJ4yhhEpEafAgWjw==';
+        var response = r.execute();
+        var responseBody = response.getBody();
+        var httpStatus = response.getStatusCode();
+
+        // Get only the usefull output from the response
+        var obj = JSON.parse(responseBody);
+        var id = obj.document_id;
+        var key = obj.document_key;
+
+        gs.log("object ID fron Deepl file; " + id);
+        gs.log("FileKey from Deepl file: " + key);
+        gs.log(responseBody);
+
+        var link = url + '?code=' + apiKey + '&documentKey=' + key + '&documentId=' + id;
+        gs.log('link: ' + link);
+		return link;
+    } catch (ex) {
+        var message = ex.message;
+        gs.log(message);
+    }
+}
+type: 'GetContentOfFile';

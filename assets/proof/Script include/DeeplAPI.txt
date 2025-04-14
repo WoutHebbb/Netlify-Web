@@ -1,0 +1,41 @@
+function DeeplAPI(text, target) {
+    //var mysum = int1 + int2;
+    // gs.addInfoMessage('The sum is: ' + mysum);
+
+    var baseUrl = 'https://festo-deepl-dev-translationapi.azurewebsites.net/api/';
+    var ApiKey = 'hg219/9PpXQLLOnieOGeXwZL29Xp4LNqRKSyi6vytK52vwm7nR/9Mg==';
+    var ToTranslate = text.replace(/\s+/g, '%20');
+    var TargetLang = target;
+    var url = baseUrl + 'TranslateText?code=' + ApiKey + '&text=' + ToTranslate + '&source_lang=&target_lang=' + TargetLang + '&tag_handling&non_splitting_tags&ignore_tags&split_sentences=1&preserve_formatting=0&department=SG-KIDN&country=Lithuania';
+
+    // Create REST Message
+    var client = new sn_ws.RESTMessageV2();
+    client.setEndpoint(url);
+
+    // Get the response
+    gs.info('GET');
+    client.setHttpMethod('GET');
+    var response = client.execute();
+    var responseBody = response.getBody();
+    var httpStatus = response.getStatusCode();
+
+    // Check status and give response
+    if (httpStatus == 200) {
+        var result = JSON.parse(responseBody);
+        var translatedText = result.translations[0].text.toString();
+        gs.info('typeof');
+        gs.info(typeof translatedText + ' = ' + translatedText);
+        // Remove spaces
+        // translatedText = text.replace(/\s+/g, '%20');
+        //callback(translatedText);
+        return translatedText;
+    } else {
+        gs.error('DeepL API error: ' + responseBody);
+    }
+
+
+
+    gs.info(translatedText);
+    return translatedText;
+
+}
